@@ -74,6 +74,13 @@ void *buddy_malloc(struct buddy_pool *pool, size_t size)
         errno = ENOMEM;
         return NULL;
     }
+
+    // attempt to fix test according to review. I believe this to be the reason for failing.
+    if (kval<MIN_K)
+    {
+        kval = MIN_K;
+    }
+    
     
     
     //R1 Find a block
@@ -168,7 +175,12 @@ void buddy_free(struct buddy_pool *pool, void *ptr)
         }
         buddy = buddy_calc(pool, block);
     }
-
+    // Add block to the list
+    block->next = pool->avail[block->kval].next;
+    block->prev = &pool->avail[block->kval];
+    pool->avail[block->kval].next = block;
+    block->next->prev = block;
+    block->tag = BLOCK_AVAIL;
 }
 
 /**
@@ -189,6 +201,7 @@ void *buddy_realloc(struct buddy_pool *pool, void *ptr, size_t size){
     
     void* new_ptr =  buddy_malloc(pool, size);
     if (new_ptr == NULL){
+        fprintf(stderr, "buddy_realloc failed to allocate memory\n");
         return NULL;
     }else{
         // Copy the old data to the new location

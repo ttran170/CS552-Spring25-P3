@@ -133,6 +133,59 @@ void test_buddy_init(void)
     }
 }
 
+//adding tests for btok and buddy_realloc
+void test_btok()
+{
+  fprintf(stderr, "->Testing btok\n");
+  //Loop through all kval MIN_k-DEFAULT_K and make sure we get the correct amount allocated.
+  //We will check all the pointer offsets to ensure the pool is all configured correctly
+  for (size_t i = MIN_K; i <= DEFAULT_K; i++)
+    {
+      size_t size = UINT64_C(1) << i;
+      size_t k = btok(size);
+      assert(k == i);
+    }
+  //Check some random values
+  for (size_t i = MIN_K; i <= DEFAULT_K; i++)
+    {
+      size_t size = (UINT64_C(1) << i)-1;
+      size_t k = btok(size);
+      assert(k == i);
+      size = (UINT64_C(1) << i)+1;
+      k = btok(size);
+      assert(k == i+1);
+    }
+
+}
+
+void test_buddy_realloc()
+{
+  fprintf(stderr, "->Testing buddy realloc\n");
+  //Loop through all kval MIN_k-DEFAULT_K and make sure we get the correct amount allocated.
+  //We will check all the pointer offsets to ensure the pool is all configured correctly
+  for (size_t i = MIN_K; i <= DEFAULT_K; i++)
+    {
+      size_t size = UINT64_C(1) << i;
+      struct buddy_pool pool;
+      buddy_init(&pool, size*2);
+      void *mem = buddy_malloc(&pool, size);
+      void *new_mem = buddy_realloc(&pool, mem, size*2);
+      if (new_mem == NULL)
+      {
+        fprintf(stderr, "Realloc failed %d\n", (int)i);
+        buddy_free(&pool, mem);
+        buddy_destroy(&pool);
+      }
+      
+      assert(new_mem != NULL);
+      buddy_free(&pool, new_mem);
+      check_buddy_pool_full(&pool);
+      buddy_destroy(&pool);
+    }
+}
+
+
+
 
 int main(void) {
   time_t t;
@@ -145,5 +198,7 @@ int main(void) {
   RUN_TEST(test_buddy_init);
   RUN_TEST(test_buddy_malloc_one_byte);
   RUN_TEST(test_buddy_malloc_one_large);
+  RUN_TEST(test_btok);
+  RUN_TEST(test_buddy_realloc);
 return UNITY_END();
 }
